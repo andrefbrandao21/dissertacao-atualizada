@@ -1,0 +1,46 @@
+# --- Dados (NUNCA subir para o GitHub) ---
+# Ignora pastas de dados brutos e processados
+data/
+*.parquet
+*.csv
+*.zip
+*.gz
+*.7z
+
+# --- Configurações Sensíveis ---
+# Ignora chaves de API e IDs de faturamento
+.env
+auth.json
+
+# --- Python e Jupyter ---
+__pycache__/
+*.py[cod]
+*$py.class
+.ipynb_checkpoints/
+Untitled*.ipynb
+venv/
+env/
+
+# --- R e Modelagem ---
+.Rhistory
+.RData
+.Ruserdata
+*.Rproj.user/
+02_modeling/.Rhistory
+
+# --- LaTeX (Escrita) ---
+# Ignora arquivos auxiliares que o LaTeX gera ao compilar
+03_writing/*.aux
+03_writing/*.log
+03_writing/*.out
+03_writing/*.toc
+03_writing/*.synctex.gz
+03_writing/*.pdf
+03_writing/*.blg
+03_writing/*.bbl
+
+# --- Sistema e IDEs ---
+.DS_Store
+Thumbs.db
+.vscode/
+.idea/

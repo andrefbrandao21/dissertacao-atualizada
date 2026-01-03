@@ -10,33 +10,44 @@ OUTPUT_FILE = os.path.join(OUTPUT_DIR, 'rais_painel_balanceado.parquet')
 
 def balancear_painel_final(df):
     """
-    Garante que cada município tenha os 4 setores em todos os 9 anos.
+    Garante que cada município tenha os setores + Total em todos os anos.
     """
-    print("⚖️  [1/2] Criando grid completo (Município x Setor x Ano)...")
+    print("⚖️  [1/3] Calculando agregados do setor 'Total'...")
     
-    # 1. Definição dos eixos
+    # 1. Gerar o Total por Município/Ano
+    # Mantemos colunas extras de ID caso existam (ex: ano_tratamento)
+    cols_agregacao = ['id_municipio', 'ano']
+    if 'ano_tratamento' in df.columns:
+        cols_agregacao.append('ano_tratamento')
+
+    df_total = df.groupby(cols_agregacao, as_index=False)['quantidade_vinculos_ativos'].sum()
+    df_total['setor'] = 'Total'
+
+    # Unir com os setores originais
+    df = pd.concat([df, df_total], ignore_index=True)
+
+    print("⚙️  [2/3] Criando grid completo (Município x Setor x Ano)...")
+    
     todos_muns = df['id_municipio'].unique()
-    todos_sets = ['Agro', 'Industria', 'Servicos', 'Setor Publico']
+    todos_sets = ['Agro', 'Industria', 'Servicos', 'Setor Publico', 'Total']
     todos_anos = sorted(df['ano'].unique())
     
-    # 2. Criar o MultiIndex para o Produto Cartesiano
     index_completo = pd.MultiIndex.from_product(
         [todos_muns, todos_sets, todos_anos], 
         names=['id_municipio', 'setor', 'ano']
     )
     
     # 3. Reindexar (Preenche lacunas com zero)
-    print("⚙️  [2/2] Reindexando e calculando log_estoque...")
-    # Removendo nome_municipio temporariamente para evitar duplicidade no reindex
     df_balanceado = (df.set_index(['id_municipio', 'setor', 'ano'])
                      .reindex(index_completo, fill_value=0)
                      .reset_index())
     
     # 4. Recuperar nomes dos municípios
-    nomes = df[['id_municipio', 'nome_municipio']].drop_duplicates()
+    nomes = df[['id_municipio', 'nome_municipio']].dropna().drop_duplicates()
     df_balanceado = df_balanceado.drop(columns=['nome_municipio'], errors='ignore').merge(nomes, on='id_municipio', how='left')
     
-    # 5. Variável Econométrica
+    print("🧪 [3/3] Calculando logs (Econometria)...")
+    # Log calculado sobre a soma (correto para o Total)
     df_balanceado['log_estoque'] = np.log1p(df_balanceado['quantidade_vinculos_ativos'].astype(np.float32))
     
     return df_balanceado
@@ -49,16 +60,14 @@ def main():
         print(f"❌ Erro: Arquivo {INPUT_FILE} não encontrado.")
         return
 
-    # Leitura e Processamento
     df_raw = pd.read_parquet(INPUT_FILE)
     
-    # Filtro preventivo (caso existam nulos ou setores 'Outros')
+    # Filtro preventivo
     df_raw = df_raw.dropna(subset=['id_municipio'])
-    df_raw = df_raw[df_raw['setor'] != 'Outros']
+    df_raw = df_raw[~df_raw['setor'].isin(['Outros', 'Total'])] # Evita duplicar se o Total já existir
     
     df_final = balancear_painel_final(df_raw)
     
-    # Salvamento
     print(f"💾 Salvando painel balanceado ({len(df_final):,} linhas)...")
     df_final.to_parquet(OUTPUT_FILE, index=False, compression='snappy')
     

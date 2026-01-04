@@ -7,7 +7,7 @@ def main():
     load_dotenv()
     billing_id = os.getenv("BILLING_ID")
     query_path = '../queries/populacao.sql'
-    output_path = '../data/raw/populacao_agregada.parquet'
+    output_path = '../data/processed/populacao_agregada.parquet'
 
     # Carregar a query do arquivo .sql
     if not os.path.exists(query_path):
